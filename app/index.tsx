@@ -220,101 +220,114 @@ export default function App() {
 
           <Text style={styles.title}>Convert Currency</Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>SOURCE AMOUNT</Text>
-            <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>
-                {selectedSourceDetails?.symbol || '$'}
-              </Text>
-              <TextInput
-                style={styles.amountInput}
-                value={amount}
-                onChangeText={handleAmountChange}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor="#666"
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-              <Text style={styles.currencyCode}>{selectedCurrency}</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>SOURCE CURRENCY</Text>
-            <Pressable 
-              style={styles.currencySelector}
-              onPress={handleSourceCurrencyPress}
-            >
-              {selectedCurrency ? (
-                <View style={styles.selectedCurrencyContainer}>
-                  <Image 
-                    source={{ uri: selectedSourceDetails?.icon_url }} 
-                    style={styles.selectedCurrencyIcon} 
-                  />
-                  <Text style={styles.selectedCurrencyText}>
-                    {selectedCurrency} {selectedSourceDetails?.name}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.selectorText}>Select a Source Currency</Text>
-              )}
-              <Text style={styles.selectorArrow}>▼</Text>
-            </Pressable>
-          </View>
-
-          {selectedCurrency && (
-            <>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>DESTINATION CURRENCY</Text>
-                <Pressable 
-                  style={styles.currencySelector}
-                  onPress={handleDestinationCurrencyPress}
-                >
-                  {selectedDestinationCurrency ? (
-                    <View style={styles.selectedCurrencyContainer}>
-                      <Image 
-                        source={{ uri: selectedDestDetails?.icon_url }} 
-                        style={styles.selectedCurrencyIcon} 
-                      />
-                      <Text style={styles.selectedCurrencyText}>
-                        {selectedDestinationCurrency} {selectedDestDetails?.name}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.selectorText}>Select a Destination Currency</Text>
-                  )}
-                  <Text style={styles.selectorArrow}>▼</Text>
-                </Pressable>
+          <View style={styles.contentBox}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>SOURCE AMOUNT</Text>
+              <View style={styles.amountContainer}>
+                <Text style={styles.currencySymbol}>
+                  {selectedSourceDetails?.symbol || '$'}
+                </Text>
+                <TextInput
+                  style={styles.amountInput}
+                  value={amount}
+                  onChangeText={handleAmountChange}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+                <Text style={styles.currencyCode}>{selectedCurrency}</Text>
               </View>
+            </View>
 
-              {selectedDestinationCurrency && Number(amount) > 0 && (
-                <View style={styles.conversionResult}>
-                  {quoteLoading ? (
-                    <Text style={styles.conversionText}>Loading quote...</Text>
-                  ) : currentQuote ? (
-                    <>
-                      <Text style={styles.conversionText}>
-                        {selectedSourceDetails?.symbol || '$'}
-                        {amount} {selectedCurrency} =
-                      </Text>
-                      <Text style={styles.convertedAmount}>
-                        {currentQuote.to_amount} {selectedDestinationCurrency} {selectedDestDetails?.name}
-                      </Text>
-                      <Text style={styles.rateText}>
-                        1 {selectedCurrency} = {currentQuote.rate} {selectedDestinationCurrency}
-                      </Text>
-                      <Text style={styles.rateText}>
-                        1 {selectedDestinationCurrency} = {(1 / Number(currentQuote.rate)).toFixed(2)} {selectedCurrency}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={styles.conversionText}>Unable to fetch quote</Text>
-                  )}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>SOURCE CURRENCY</Text>
+              <Pressable 
+                style={styles.currencySelector}
+                onPress={handleSourceCurrencyPress}
+              >
+                {selectedCurrency ? (
+                  <View style={styles.selectedCurrencyContainer}>
+                    <Image 
+                      source={{ uri: selectedSourceDetails?.icon_url }} 
+                      style={styles.selectedCurrencyIcon} 
+                    />
+                    <Text>
+                      <Text style={styles.currencyId}>{selectedCurrency}</Text>
+                      <Text style={styles.currencyName}> {selectedSourceDetails?.name}</Text>
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.selectorText}>Select a Source Currency</Text>
+                )}
+                <View style={styles.selectorArrow}>
+                  <Text style={styles.chevron}>›</Text>
                 </View>
-              )}
-            </>
-          )}
+              </Pressable>
+            </View>
+
+            {selectedCurrency && (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>DESTINATION CURRENCY</Text>
+                  <Pressable 
+                    style={styles.currencySelector}
+                    onPress={handleDestinationCurrencyPress}
+                  >
+                    {selectedDestinationCurrency ? (
+                      <View style={styles.selectedCurrencyContainer}>
+                        <Image 
+                          source={{ uri: selectedDestDetails?.icon_url }} 
+                          style={styles.selectedCurrencyIcon} 
+                        />
+                        <Text>
+                          <Text style={styles.currencyId}>{selectedDestinationCurrency}</Text>
+                          <Text style={styles.currencyName}> {selectedDestDetails?.name}</Text>
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.selectorText}>Select a Destination Currency</Text>
+                    )}
+                    <View style={styles.selectorArrow}>
+                      <Text style={styles.chevron}>›</Text>
+                    </View>
+                  </Pressable>
+                </View>
+
+                {selectedDestinationCurrency && Number(amount) > 0 && (
+                  <View style={styles.conversionResult}>
+                    {quoteLoading ? (
+                      <Text style={styles.conversionText}>Loading quote...</Text>
+                    ) : currentQuote ? (
+                      <>
+                        <Text style={styles.conversionText}>
+                          {selectedSourceDetails?.symbol || '$'}
+                          {amount} {selectedCurrency} =
+                        </Text>
+                        <Text style={styles.convertedAmount}>
+                          <Text style={styles.boldText}>
+                            {currentQuote.to_amount} {selectedDestDetails?.name}
+                          </Text>
+                        </Text>
+                        <Text style={styles.rateText}>
+                          <Text style={styles.boldText}>
+                            1 {selectedCurrency} = {currentQuote.rate} {selectedDestinationCurrency}
+                          </Text>
+                        </Text>
+                        <Text style={styles.rateText}>
+                          <Text style={styles.boldText}>
+                            1 {selectedDestinationCurrency} = {(1 / Number(currentQuote.rate)).toFixed(2)} {selectedCurrency}
+                          </Text>
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.conversionText}>Unable to fetch quote</Text>
+                    )}
+                  </View>
+                )}
+              </>
+            )}
+          </View>
 
           <Modal
             visible={showCurrencyPicker}
@@ -336,16 +349,20 @@ export default function App() {
 
                 <View style={styles.tabContainer}>
                   <Pressable
-                    style={[styles.tab, activeTab === 'crypto' && styles.activeTab]}
+                    style={[styles.tab, { alignSelf: 'flex-end' }]}
                     onPress={() => setActiveTab('crypto')}
                   >
-                    <Text style={[styles.tabText, activeTab === 'crypto' && styles.activeTabText]}>Crypto</Text>
+                    <Text style={[styles.tabText, activeTab === 'crypto' && styles.activeTabText]}>
+                      Crypto
+                    </Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.tab, activeTab === 'fiat' && styles.activeTab]}
+                    style={[styles.tab, { alignSelf: 'flex-start' }]}
                     onPress={() => setActiveTab('fiat')}
                   >
-                    <Text style={[styles.tabText, activeTab === 'fiat' && styles.activeTabText]}>Fiat</Text>
+                    <Text style={[styles.tabText, activeTab === 'fiat' && styles.activeTabText]}>
+                      Fiat
+                    </Text>
                   </Pressable>
                 </View>
 
@@ -392,9 +409,10 @@ const styles = StyleSheet.create({
     width: 100,
   },
   title: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: 'bold',
     padding: 24,
+    paddingTop: 40,
     textAlign: 'center',
     width: '100%',
     color: '#000',
@@ -410,38 +428,93 @@ const styles = StyleSheet.create({
   amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingBottom: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E8ECF4',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   currencySymbol: {
     fontSize: 18,
     marginRight: 4,
+    fontWeight: '600',
+    color: '#000',
   },
   amountInput: {
     flex: 1,
     fontSize: 18,
     padding: 0,
+    fontWeight: '600',  // Make text bold
+    color: '#000',
   },
   currencyCode: {
     fontSize: 18,
-    color: '#666',
+    color: '#000',
     marginLeft: 8,
+    fontWeight: '600',
   },
   currencySelector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingVertical: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E8ECF4',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  selectedCurrencyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  selectedCurrencyIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    borderRadius: 10,
+  },
+  selectedCurrencyText: {
+    fontSize: 16,
+    color: '#000',
+    flex: 1,
+  },
+  currencyId: {
+    fontWeight: '600',  // Make the currency ID bold
+  },
+  currencyName: {
+    color: '#666',
+    marginLeft: 4,
   },
   selectorText: {
     fontSize: 16,
     color: '#666',
   },
   selectorArrow: {
-    fontSize: 16,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '90deg' }],  // Rotate the chevron to point down
+  },
+  chevron: {
+    fontSize: 20,
     color: '#666',
   },
   modalOverlay: {
@@ -465,7 +538,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -478,44 +551,39 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   currencyItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#E8ECF4',
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    marginBottom: 8,
   },
   currencyItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   currencyIcon: {
-    width: 24,
-    height: 24,
+    width: 16,
+    height: 16,
     marginRight: 12,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   currencyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
     flex: 1,
-  },
-  chevron: {
-    fontSize: 20,
-    color: '#666',
   },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 32,
   },
   tab: {
-    flex: 1,
     paddingVertical: 8,
-    alignItems: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
   },
   tabText: {
     color: '#666',
@@ -524,6 +592,9 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#007AFF',
     fontWeight: '600',
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+    paddingBottom: 4,
   },
   searchContainer: {
     padding: 16,
@@ -531,37 +602,38 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 4,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E8ECF4',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchIcon: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    left: 8,
+    top: '50%',
+    transform: [{ translateY: -8 }],
     fontSize: 16,
     color: '#666',
-    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     padding: 8,
+    paddingLeft: 32,
     fontSize: 16,
     color: '#000',
-  },
-  selectedCurrencyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  selectedCurrencyIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 12,
-    borderRadius: 12,
-  },
-  selectedCurrencyText: {
-    fontSize: 16,
-    color: '#000',
-    flex: 1,
   },
   conversionResult: {
     padding: 16,
@@ -569,12 +641,12 @@ const styles = StyleSheet.create({
   },
   conversionText: {
     fontSize: 16,
-    color: '#666',
+    color: '#000',
     textAlign: 'left',
+    fontWeight: '600',
   },
   convertedAmount: {
     fontSize: 24,
-    fontWeight: 'bold',
     marginVertical: 8,
     textAlign: 'left',
   },
@@ -583,5 +655,22 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     textAlign: 'left',
+  },
+  boldText: {
+    fontWeight: '600',
+  },
+  contentBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 0,
+    padding: 16,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
 }); 
