@@ -24,7 +24,7 @@ export const CurrencySelector = ({
       <View style={styles.content}>
         <CurrencyIcon url={currency.icon_url} size={20} />
         <View style={styles.textContainer}>
-          <Text style={styles.currencyId}>{currency.id}</Text>
+          <Text style={styles.currencyId}>{currency.id.toUpperCase()}</Text>
           <Text style={styles.currencyName}>{currency.name}</Text>
         </View>
       </View>
