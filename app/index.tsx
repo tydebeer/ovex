@@ -1,19 +1,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Modal, FlatList, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, Modal, FlatList, SafeAreaView, Image, Keyboard } from 'react-native';
 import { getCurrencies } from '@/services/currencyService';
 import { Currency } from '@/interfaces/Currency';
 import { BlurView } from 'expo-blur';
 
 export default function App() {
-  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
-  const [amount, setAmount] = useState('0');
+  const [amount, setAmount] = useState('');
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [selectedDestinationCurrency, setSelectedDestinationCurrency] = useState('');
   const [cryptoCurrencies, setCryptoCurrencies] = useState<Currency[]>([]);
   const [fiatCurrencies, setFiatCurrencies] = useState<Currency[]>([]);
   const [activeTab, setActiveTab] = useState<'crypto' | 'fiat'>('crypto');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSelectingDestination, setIsSelectingDestination] = useState(false);
 
   useEffect(() => {
     loadAllCurrencies();
@@ -34,7 +35,7 @@ export default function App() {
     }
   };
 
-  const filteredCurrencies = useMemo(() => {
+  const filteredCurrencies = useMemo(() => { 
     const currencies = activeTab === 'crypto' ? cryptoCurrencies : fiatCurrencies;
     if (!searchQuery) return currencies;
     
@@ -45,42 +46,65 @@ export default function App() {
   }, [activeTab, searchQuery, cryptoCurrencies, fiatCurrencies]);
 
   const handleAmountChange = (text: string) => {
-    // Only allow numbers and up to 2 decimal places
     const regex = /^\d*\.?\d{0,2}$/;
     if (regex.test(text) || text === '') {
       setAmount(text);
     }
   };
 
+  const handleCurrencySelect = (currency: string) => {
+    if (isSelectingDestination) {
+      setSelectedDestinationCurrency(currency);
+    } else {
+      setSelectedCurrency(currency);
+    }
+    setShowCurrencyPicker(false);
+    setSearchQuery('');
+    setIsSelectingDestination(false);
+  };
+
+  const handleSourceCurrencyPress = () => {
+    setIsSelectingDestination(false);
+    setShowCurrencyPicker(true);
+  };
+
+  const handleDestinationCurrencyPress = () => {
+    setIsSelectingDestination(true);
+    setShowCurrencyPicker(true);
+  };
+
   const renderCurrencyItem = ({ item }: { item: Currency }) => (
     <Pressable
       style={styles.currencyItem}
-      onPress={() => {
-        setSelectedCurrency(item.symbol);
-        setShowCurrencyPicker(false);
-        setSearchQuery('');
-      }}
+      onPress={() => handleCurrencySelect(item.id.toUpperCase())}
     >
       <View style={styles.currencyItemContent}>
         <Image 
           source={{ uri: item.icon_url }} 
           style={styles.currencyIcon} 
-          //defaultSource={require('@/assets/favicon.png')}
         />
-        <View style={styles.currencyInfo}>
-          <Text style={styles.currencySymbolText}>{item.id.toUpperCase()}</Text>
-          <Text style={styles.currencyName}>{item.name}</Text>
-        </View>
+        <Text style={styles.currencyText}>
+          {item.id.toUpperCase()} {item.name}
+        </Text>
         <Text style={styles.chevron}>›</Text>
       </View>
     </Pressable>
   );
 
-  // Clear search when modal closes
   const handleClosePicker = () => {
     setShowCurrencyPicker(false);
     setSearchQuery('');
   };
+
+  const getSelectedCurrencyDetails = (currencyId: string) => {
+    // Search in both crypto and fiat lists
+    return cryptoCurrencies.find(c => c.id.toUpperCase() === currencyId) ||
+           fiatCurrencies.find(c => c.id.toUpperCase() === currencyId);
+  };
+
+  // In your render method, replace filteredCurrencies.find with getSelectedCurrencyDetails:
+  const selectedSourceDetails = getSelectedCurrencyDetails(selectedCurrency);
+  const selectedDestDetails = getSelectedCurrencyDetails(selectedDestinationCurrency);
 
   if (loading) {
     return (
@@ -91,120 +115,190 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Placeholder for OVEX logo */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>OVEX</Text>
-      </View>
-
-      <Text style={styles.title}>Convert Currency</Text>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>SOURCE AMOUNT</Text>
-        <View style={styles.amountContainer}>
-          <Text style={styles.currencySymbol}>$</Text>
-          <TextInput
-            style={styles.amountInput}
-            value={amount}
-            onChangeText={handleAmountChange}
-            keyboardType="decimal-pad"
-            placeholder="0"
-          />
-          <Text style={styles.currencyCode}>{selectedCurrency}</Text>
-        </View>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>SOURCE CURRENCY</Text>
-        <Pressable 
-          style={styles.currencySelector}
-          onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
-        >
-          <Text style={styles.selectorText}>
-            {showCurrencyPicker ? 'Select a Source Currency' : 'Select a Source Currency'}
-          </Text>
-          <Text style={styles.selectorArrow}>▼</Text>
-        </Pressable>
-      </View>
-
-      <Modal
-        visible={showCurrencyPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={handleClosePicker}
-      >
-        <BlurView intensity={10} style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <Pressable onPress={handleClosePicker}>
-                <Text style={styles.closeButton}>✕</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.titleContainer}>
-              <Text style={styles.modalTitle}>Select Currency</Text>
-            </View>
-
-            <View style={styles.tabContainer}>
-              <Pressable
-                style={[styles.tab, activeTab === 'crypto' && styles.activeTab]}
-                onPress={() => setActiveTab('crypto')}
-              >
-                <Text style={[styles.tabText, activeTab === 'crypto' && styles.activeTabText]}>Crypto</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.tab, activeTab === 'fiat' && styles.activeTab]}
-                onPress={() => setActiveTab('fiat')}
-              >
-                <Text style={[styles.tabText, activeTab === 'fiat' && styles.activeTabText]}>Fiat</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputContainer}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={`Search ${activeTab === 'crypto' ? 'Crypto' : 'Currencies'}`}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
-            </View>
-
-            <FlatList
-              data={filteredCurrencies}
-              renderItem={renderCurrencyItem}
-              keyExtractor={(item) => item.id}
-              style={styles.currencyList}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#1e222c' }}>
+      <Pressable onPress={Keyboard.dismiss} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
             />
           </View>
-        </BlurView>
-      </Modal>
-    </View>
+
+          <Text style={styles.title}>Convert Currency</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>SOURCE AMOUNT</Text>
+            <View style={styles.amountContainer}>
+              <Text style={styles.currencySymbol}>
+                {selectedSourceDetails?.symbol || '$'}
+              </Text>
+              <TextInput
+                style={styles.amountInput}
+                value={amount}
+                onChangeText={handleAmountChange}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor="#666"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              <Text style={styles.currencyCode}>{selectedCurrency}</Text>
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>SOURCE CURRENCY</Text>
+            <Pressable 
+              style={styles.currencySelector}
+              onPress={handleSourceCurrencyPress}
+            >
+              {selectedCurrency ? (
+                <View style={styles.selectedCurrencyContainer}>
+                  <Image 
+                    source={{ uri: selectedSourceDetails?.icon_url }} 
+                    style={styles.selectedCurrencyIcon} 
+                  />
+                  <Text style={styles.selectedCurrencyText}>
+                    {selectedCurrency} {selectedSourceDetails?.name}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.selectorText}>Select a Source Currency</Text>
+              )}
+              <Text style={styles.selectorArrow}>▼</Text>
+            </Pressable>
+          </View>
+
+          {selectedCurrency && (
+            <>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>DESTINATION CURRENCY</Text>
+                <Pressable 
+                  style={styles.currencySelector}
+                  onPress={handleDestinationCurrencyPress}
+                >
+                  {selectedDestinationCurrency ? (
+                    <View style={styles.selectedCurrencyContainer}>
+                      <Image 
+                        source={{ uri: selectedDestDetails?.icon_url }} 
+                        style={styles.selectedCurrencyIcon} 
+                      />
+                      <Text style={styles.selectedCurrencyText}>
+                        {selectedDestinationCurrency} {selectedDestDetails?.name}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.selectorText}>Select a Destination Currency</Text>
+                  )}
+                  <Text style={styles.selectorArrow}>▼</Text>
+                </Pressable>
+              </View>
+
+              {/* Only show conversion result if both currencies are selected AND amount > 0 */}
+              {selectedDestinationCurrency && Number(amount) > 0 && (
+                <View style={styles.conversionResult}>
+                  <Text style={styles.conversionText}>
+                    {selectedSourceDetails?.symbol || '$'}
+                    {amount} {selectedCurrency} =
+                  </Text>
+                  <Text style={styles.convertedAmount}>
+                    0.93 {selectedDestinationCurrency} {selectedDestDetails?.name}
+                  </Text>
+                  <Text style={styles.rateText}>
+                    1 {selectedCurrency} = 0.0000093 {selectedDestinationCurrency}
+                  </Text>
+                  <Text style={styles.rateText}>
+                    1 {selectedDestinationCurrency} = 108106.60 {selectedCurrency}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          <Modal
+            visible={showCurrencyPicker}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={handleClosePicker}
+          >
+            <BlurView intensity={10} style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { height: '80%' }]}>
+                <View style={styles.modalHeader}>
+                  <Pressable onPress={handleClosePicker}>
+                    <Text style={styles.closeButton}>✕</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.titleContainer}>
+                  <Text style={styles.modalTitle}>Select Currency</Text>
+                </View>
+
+                <View style={styles.tabContainer}>
+                  <Pressable
+                    style={[styles.tab, activeTab === 'crypto' && styles.activeTab]}
+                    onPress={() => setActiveTab('crypto')}
+                  >
+                    <Text style={[styles.tabText, activeTab === 'crypto' && styles.activeTabText]}>Crypto</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.tab, activeTab === 'fiat' && styles.activeTab]}
+                    onPress={() => setActiveTab('fiat')}
+                  >
+                    <Text style={[styles.tabText, activeTab === 'fiat' && styles.activeTabText]}>Fiat</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputContainer}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder={`Search ${activeTab === 'crypto' ? 'Crypto' : 'Currencies'}`}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                  </View>
+                </View>
+
+                <FlatList
+                  data={filteredCurrencies}
+                  renderItem={renderCurrencyItem}
+                  keyExtractor={(item) => item.id}
+                  style={styles.currencyList}
+                />
+              </View>
+            </BlurView>
+          </Modal>
+        </View>
+      </Pressable>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
   logoContainer: {
     height: 60,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1e222c',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+  logoImage: {
+    height: 40,
+    width: 100,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    padding: 16,
+    padding: 24,
+    textAlign: 'center',
+    width: '100%',
+    color: '#000',
   },
   inputContainer: {
     padding: 16,
@@ -258,8 +352,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     height: '80%',
   },
   modalHeader: {
@@ -301,16 +395,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderRadius: 12,
   },
-  currencyInfo: {
-    flex: 1,
-  },
-  currencySymbolText: {
+  currencyText: {
     fontSize: 16,
-    fontWeight: '600',
-  },
-  currencyName: {
-    fontSize: 14,
-    color: '#666',
+    color: '#000',
+    flex: 1,
   },
   chevron: {
     fontSize: 20,
@@ -359,5 +447,42 @@ const styles = StyleSheet.create({
     padding: 8,
     fontSize: 16,
     color: '#000',
+  },
+  selectedCurrencyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  selectedCurrencyIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+    borderRadius: 12,
+  },
+  selectedCurrencyText: {
+    fontSize: 16,
+    color: '#000',
+    flex: 1,
+  },
+  conversionResult: {
+    padding: 16,
+    alignItems: 'flex-start',
+  },
+  conversionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'left',
+  },
+  convertedAmount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 8,
+    textAlign: 'left',
+  },
+  rateText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'left',
   },
 }); 
