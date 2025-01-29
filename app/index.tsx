@@ -3,6 +3,10 @@ import { View, Text, StyleSheet, TextInput, Pressable, Modal, FlatList, SafeArea
 import { getCurrencies } from '@/services/currencyService';
 import { Currency } from '@/interfaces/Currency';
 import { BlurView } from 'expo-blur';
+import { getQuote } from '@/services/quoteService';
+import { RFQuote } from '@/interfaces/RFQuote';
+import { getMarkets } from '@/services/marketService';
+import { Market } from '@/interfaces/Market';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -15,35 +19,76 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'crypto' | 'fiat'>('crypto');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSelectingDestination, setIsSelectingDestination] = useState(false);
+  const [currentQuote, setCurrentQuote] = useState<RFQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [markets, setMarkets] = useState<Market[]>([]);
 
   useEffect(() => {
-    loadAllCurrencies();
+    loadAllData();
   }, []);
 
-  const loadAllCurrencies = async () => {
+  const loadAllData = async () => {
     try {
-      const [cryptoData, fiatData] = await Promise.all([
-        getCurrencies('coin'),
-        getCurrencies('fiat')
+      const [cryptoData, fiatData, marketsData] = await Promise.all([
+        getCurrencies(),
+        getCurrencies('fiat'),
+        getMarkets()
       ]);
+      
       setCryptoCurrencies(cryptoData);
       setFiatCurrencies(fiatData);
+      setMarkets(marketsData);
     } catch (error) {
-      console.error('Failed to load currencies:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const getAvailableDestinationCurrencies = (sourceCurrency: string) => {
+    if (!sourceCurrency) return [];
+    
+    const sourceId = sourceCurrency.toLowerCase();
+    const availableMarkets = markets.filter(market => 
+      market.base_currency === sourceId || market.quote_currency === sourceId
+    );
+
+    const destinationIds = new Set(availableMarkets.map(market => {
+      return market.base_currency === sourceId ? market.quote_currency : market.base_currency;
+    }));
+
+    return [...destinationIds];
+  };
+
   const filteredCurrencies = useMemo(() => { 
     const currencies = activeTab === 'crypto' ? cryptoCurrencies : fiatCurrencies;
-    if (!searchQuery) return currencies;
+    let filtered = currencies;
+
+    if (showCurrencyPicker && isSelectingDestination && selectedCurrency) {
+      const availableDestinations = getAvailableDestinationCurrencies(selectedCurrency);
+      filtered = filtered.filter(currency => 
+        availableDestinations.includes(currency.id.toLowerCase())
+      );
+    }
     
-    return currencies.filter(currency => 
-      currency.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      currency.id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [activeTab, searchQuery, cryptoCurrencies, fiatCurrencies]);
+    if (searchQuery) {
+      filtered = filtered.filter(currency => 
+        currency.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        currency.id.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [
+    activeTab, 
+    searchQuery, 
+    cryptoCurrencies, 
+    fiatCurrencies, 
+    selectedCurrency, 
+    isSelectingDestination, 
+    showCurrencyPicker, 
+    markets
+  ]);
 
   const handleAmountChange = (text: string) => {
     const regex = /^\d*\.?\d{0,2}$/;
@@ -57,6 +102,7 @@ export default function App() {
       setSelectedDestinationCurrency(currency);
     } else {
       setSelectedCurrency(currency);
+      setSelectedDestinationCurrency('');  // Reset destination when source changes
     }
     setShowCurrencyPicker(false);
     setSearchQuery('');
@@ -97,14 +143,60 @@ export default function App() {
   };
 
   const getSelectedCurrencyDetails = (currencyId: string) => {
-    // Search in both crypto and fiat lists
     return cryptoCurrencies.find(c => c.id.toUpperCase() === currencyId) ||
            fiatCurrencies.find(c => c.id.toUpperCase() === currencyId);
   };
 
-  // In your render method, replace filteredCurrencies.find with getSelectedCurrencyDetails:
   const selectedSourceDetails = getSelectedCurrencyDetails(selectedCurrency);
   const selectedDestDetails = getSelectedCurrencyDetails(selectedDestinationCurrency);
+
+  const fetchQuote = async () => {
+    if (!selectedCurrency || !selectedDestinationCurrency || !amount || Number(amount) <= 0) {
+      setCurrentQuote(null);
+      return;
+    }
+
+    setQuoteLoading(true);
+    try {
+      const isSourceFiat = fiatCurrencies.some(c => c.id.toUpperCase() === selectedCurrency);
+      const isDestinationFiat = fiatCurrencies.some(c => c.id.toUpperCase() === selectedDestinationCurrency);
+      
+      const side = isSourceFiat && !isDestinationFiat ? 'buy' : 'sell';
+      
+      // Find the correct market pair
+      const sourceId = selectedCurrency.toLowerCase();
+      const destId = selectedDestinationCurrency.toLowerCase();
+      
+      const market = markets.find(m => 
+        (m.base_currency === sourceId && m.quote_currency === destId) ||
+        (m.base_currency === destId && m.quote_currency === sourceId)
+      );
+
+      if (!market) {
+        throw new Error('Market pair not found');
+      }
+
+      const quote = await getQuote({
+        market: market.id,
+        from_amount: Number(amount),
+        side,
+      });
+      setCurrentQuote(quote);
+    } catch (error) {
+      console.error('Failed to fetch quote:', error);
+      setCurrentQuote(null);
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchQuote();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [amount, selectedCurrency, selectedDestinationCurrency]);
 
   if (loading) {
     return (
@@ -196,22 +288,29 @@ export default function App() {
                 </Pressable>
               </View>
 
-              {/* Only show conversion result if both currencies are selected AND amount > 0 */}
               {selectedDestinationCurrency && Number(amount) > 0 && (
                 <View style={styles.conversionResult}>
-                  <Text style={styles.conversionText}>
-                    {selectedSourceDetails?.symbol || '$'}
-                    {amount} {selectedCurrency} =
-                  </Text>
-                  <Text style={styles.convertedAmount}>
-                    0.93 {selectedDestinationCurrency} {selectedDestDetails?.name}
-                  </Text>
-                  <Text style={styles.rateText}>
-                    1 {selectedCurrency} = 0.0000093 {selectedDestinationCurrency}
-                  </Text>
-                  <Text style={styles.rateText}>
-                    1 {selectedDestinationCurrency} = 108106.60 {selectedCurrency}
-                  </Text>
+                  {quoteLoading ? (
+                    <Text style={styles.conversionText}>Loading quote...</Text>
+                  ) : currentQuote ? (
+                    <>
+                      <Text style={styles.conversionText}>
+                        {selectedSourceDetails?.symbol || '$'}
+                        {amount} {selectedCurrency} =
+                      </Text>
+                      <Text style={styles.convertedAmount}>
+                        {currentQuote.to_amount} {selectedDestinationCurrency} {selectedDestDetails?.name}
+                      </Text>
+                      <Text style={styles.rateText}>
+                        1 {selectedCurrency} = {currentQuote.rate} {selectedDestinationCurrency}
+                      </Text>
+                      <Text style={styles.rateText}>
+                        1 {selectedDestinationCurrency} = {(1 / Number(currentQuote.rate)).toFixed(2)} {selectedCurrency}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.conversionText}>Unable to fetch quote</Text>
+                  )}
                 </View>
               )}
             </>
