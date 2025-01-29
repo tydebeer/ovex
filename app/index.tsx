@@ -242,7 +242,7 @@ export default function App() {
                 {selectedDestinationCurrency && Number(amount) > 0 && (
                   <View style={styles.conversionResult}>
                     {quoteLoading ? (
-                      <Text style={styles.conversionText}>Loading quote...</Text>
+                      <Spinner/>
                     ) : currentQuote ? (
                       <>
                         <Text style={styles.conversionText}>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currencyId: {
-    fontWeight: '600',  // Make the currency ID bold
+    fontWeight: '600',
   },
   currencyName: {
     color: '#666',
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '90deg' }],  // Rotate the chevron to point down
+    transform: [{ rotate: '90deg' }], 
   },
   chevron: {
     fontSize: 20,
